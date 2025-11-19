@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Cyber Clicker</title>
+    <style>
+        body {
+            background-color: #0d0d0d;
+            color: white;
+            font-family: 'Courier New', Courier, monospace;
+            text-align: center;
+            user-select: none; /* Prevents highlighting text when clicking fast */
+            margin: 0;
+            padding-top: 20px;
+        }
+
+        .nav-bar { text-align: left; padding: 0 20px; }
+        .back-link {
+            color: #00ffff;
+            text-decoration: none;
+            border: 1px solid #00ffff;
+            padding: 5px 10px;
+            border-radius: 5px;
+            transition: 0.3s;
+        }
+        .back-link:hover { background-color: #00ffff; color: black; }
+
+        h1 { color: #00ffff; text-shadow: 0 0 10px #00ffff; margin-bottom: 10px; }
+
+        /* The Big Score Display */
+        .currency-container {
+            background: #1a1a1a;
+            padding: 20px;
+            margin: 20px auto;
+            width: 300px;
+            border: 2px solid #333;
+            border-radius: 10px;
+        }
+        #byte-count { font-size: 40px; color: #00ff00; font-weight: bold; }
+        .label { color: #888; font-size: 14px; }
+
+        /* The Main Click Button */
+        #hack-btn {
+            width: 200px;
+            height: 200px;
+            border-radius: 50%;
+            border: 5px solid #00ffff;
+            background-color: #003333;
+            color: #00ffff;
+            font-size: 24px;
+            cursor: pointer;
+            margin: 20px;
+            transition: 0.1s;
+            box-shadow: 0 0 20px rgba(0, 255, 255, 0.2);
+            outline: none;
+        }
+        #hack-btn:active {
+            transform: scale(0.95);
+            background-color: #00ffff;
+            color: black;
+        }
+
+        /* Shop Section */
+        h3 { color: #ff00ff; margin-top: 30px; }
+        .shop {
+            max-width: 600px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            padding: 10px;
+        }
+
+        .upgrade-card {
+            background: #222;
+            border: 1px solid #444;
+            padding: 15px;
+            border-radius: 5px;
+            text-align: left;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+        .upgrade-card:hover { background: #333; border-color: #00ffff; }
+        .upgrade-card:active { background: #444; }
+        
+        .upgrade-title { font-weight: bold; color: #ff00ff; display: block; }
+        .upgrade-cost { float: right; color: yellow; font-weight: bold; }
+        .upgrade-desc { font-size: 12px; color: #ccc; margin-top: 5px; display: block; line-height: 1.4;}
+
+        .stats { margin-top: 30px; color: #666; font-size: 12px; }
+        
+        button.reset-btn {
+            margin-top: 30px;
+            background: #330000;
+            color: red;
+            border: 1px solid red;
+            padding: 10px 20px;
+            cursor: pointer;
+            margin-bottom: 50px;
+        }
+        button.reset-btn:hover { background: red; color: white; }
+    </style>
+</head>
+<body>
+
+    <div class="nav-bar">
+        <a href="../../index.html" class="back-link">← Back to Arcade</a>
+    </div>
+
+    <h1>CYBER CLICKER</h1>
+
+    <div class="currency-container">
+        <div id="byte-count">0</div>
+        <div class="label">BYTES HACKED</div>
+        <div class="label" style="margin-top: 5px;">
+            <span id="bps">0</span> Bytes Per Second
+        </div>
+    </div>
+
+    <button id="hack-btn" onclick="hack()">HACK_</button>
+
+    <h3>/// DARK WEB SHOP ///</h3>
+    
+    <div class="shop">
+        <div class="upgrade-card" onclick="buyUpgrade('click')">
+            <span class="upgrade-cost" id="cost-click">50</span>
+            <span class="upgrade-title">Better CPU</span>
+            <span class="upgrade-desc">
+                +1 Byte per click<br>
+                Level: <span id="lvl-click">0</span>
+            </span>
+        </div>
+
+        <div class="upgrade-card" onclick="buyUpgrade('auto1')">
+            <span class="upgrade-cost" id="cost-auto1">100</span>
+            <span class="upgrade-title">Script Kiddie</span>
+            <span class="upgrade-desc">
+                +5 Bytes/sec<br>
+                Owned: <span id="lvl-auto1">0</span>
+            </span>
+        </div>
+
+        <div class="upgrade-card" onclick="buyUpgrade('auto2')">
+            <span class="upgrade-cost" id="cost-auto2">1000</span>
+            <span class="upgrade-title">Bot Net</span>
+            <span class="upgrade-desc">
+                +50 Bytes/sec<br>
+                Owned: <span id="lvl-auto2">0</span>
+            </span>
+        </div>
+    </div>
+
+    <div class="stats">
+        Game saves automatically every 5 seconds.
+    </div>
+    <button class="reset-btn" onclick="hardReset()">RESET SAVE FILE</button>
+
+    <script>
+        // GAME VARIABLES
+        let gameData = {
+            bytes: 0,
+            clickPower: 1,
+            autoIncome: 0,
+            upgrades: {
+                click: { count: 0, cost: 50, power: 1 },
+                auto1: { count: 0, cost: 100, power: 5 },
+                auto2: { count: 0, cost: 1000, power: 50 }
+            }
+        };
+
+        // LOAD SAVE GAME
+        let savedGame = localStorage.getItem('cyberClickerSave');
+        if (savedGame !== null) {
+            gameData = JSON.parse(savedGame);
+        }
+
+        // UI ELEMENTS
+        const elBytes = document.getElementById('byte-count');
+        const elBps = document.getElementById('bps');
+
+        // INITIALIZE UI
+        updateUI();
+
+        // --- CORE FUNCTIONS ---
+
+        function hack() {
+            gameData.bytes += gameData.clickPower;
+            updateUI();
+        }
+
+        function buyUpgrade(type) {
+            const upgrade = gameData.upgrades[type];
+            
+            if (gameData.bytes >= upgrade.cost) {
+                // Pay the cost
+                gameData.bytes -= upgrade.cost;
+                
+                // Increase Level
+                upgrade.count++;
+                
+                // Increase Cost (Price goes up by 50% each time)
+                upgrade.cost = Math.floor(upgrade.cost * 1.5);
+                
+                // Update Powers
+                if (type === 'click') {
+                    gameData.clickPower += 1;
+                } else {
+                    gameData.autoIncome += upgrade.power;
+                }
+
+                updateUI();
+                saveGame();
+            } else {
+                // Optional: Add a red flash effect or sound here
+                console.log("Not enough Bytes!");
+            }
+        }
+
+        function updateUI() {
+            // Update Score
+            elBytes.innerText = Math.floor(gameData.bytes); // No decimals
+            elBps.innerText = gameData.autoIncome;
+
+            // Update Shop Text
+            document.getElementById('cost-click').innerText = gameData.upgrades.click.cost;
+            document.getElementById('lvl-click').innerText = gameData.upgrades.click.count;
+
+            document.getElementById('cost-auto1').innerText = gameData.upgrades.auto1.cost;
+            document.getElementById('lvl-auto1').innerText = gameData.upgrades.auto1.count;
+
+            document.getElementById('cost-auto2').innerText = gameData.upgrades.auto2.cost;
+            document.getElementById('lvl-auto2').innerText = gameData.upgrades.auto2.count;
+        }
+
+        // --- GAME LOOPS ---
+
+        // Loop 1: Add Auto Income (Runs every 1 second)
+        setInterval(function() {
+            if(gameData.autoIncome > 0) {
+                gameData.bytes += gameData.autoIncome;
+                updateUI();
+            }
+        }, 1000);
+
+        // Loop 2: Save Game (Runs every 5 seconds)
+        setInterval(function() {
+            saveGame();
+        }, 5000);
+
+        function saveGame() {
+            localStorage.setItem('cyberClickerSave', JSON.stringify(gameData));
+        }
+
+        function hardReset() {
+            if(confirm("Are you sure? This deletes all progress.")) {
+                localStorage.removeItem('cyberClickerSave');
+                location.reload(); // Refresh page to restart
+            }
+        }
+    </script>
+</body>
+</html>

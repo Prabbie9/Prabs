@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Neon Leap - Levels</title>
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+    <style>
+        body {
+            margin: 0;
+            background-color: #050505;
+            color: white;
+            font-family: 'Press Start 2P', cursive;
+            text-align: center;
+            overflow: hidden;
+            user-select: none;
+            
+            /* Flexbox ensures content is centered vertically if screen is tall */
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        /* --- Navigation --- */
+        .nav-bar { 
+            position: absolute; 
+            top: 20px; 
+            left: 20px; 
+            z-index: 100; 
+        }
+        
+        .back-link {
+            color: #ff9900; 
+            text-decoration: none;
+            border: 2px solid #ff9900;
+            padding: 8px 12px;
+            border-radius: 5px;
+            background: black;
+            font-size: 12px;
+            font-family: sans-serif;
+            transition: 0.3s;
+            cursor: pointer;
+        }
+        .back-link:hover { background-color: #ff9900; color: black; }
+
+        /* --- TITLE FIX --- */
+        h1 {
+            /* CHANGED: 'relative' means it takes up real space */
+            position: relative; 
+            display: block;
+            margin-top: 20px;
+            margin-bottom: 20px; /* Pushes the game box down */
+            
+            color: #ff9900;
+            text-shadow: 0 0 10px #ff9900;
+            font-size: 30px;
+            z-index: 5;
+        }
+
+        /* --- Game Box --- */
+        #game-container {
+            position: relative;
+            width: 400px;
+            height: 600px;
+            border: 4px solid #333;
+            background-color: #111;
+            box-shadow: 0 0 20px rgba(255, 153, 0, 0.2);
+            
+            /* We don't need margin-top anymore because the H1 handles it */
+            margin-bottom: 20px;
+        }
+
+        canvas { display: block; }
+
+        /* --- OVERLAYS --- */
+        .overlay {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            background: rgba(0,0,0,0.95);
+            z-index: 10;
+        }
+
+        .hidden { display: none !important; }
+
+        /* --- Level Select Grid --- */
+        #level-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        .level-btn {
+            width: 50px;
+            height: 50px;
+            background: #111;
+            border: 2px solid #ff9900;
+            color: #ff9900;
+            font-family: 'Press Start 2P', cursive;
+            font-size: 16px;
+            cursor: pointer;
+            transition: 0.2s;
+            box-shadow: 0 0 5px #ff9900;
+        }
+
+        .level-btn:hover {
+            background: #ff9900;
+            color: black;
+            transform: scale(1.1);
+        }
+
+        /* --- Action Buttons --- */
+        .action-btn {
+            padding: 15px 20px;
+            margin: 10px;
+            background: transparent;
+            border: 2px solid #00ff00;
+            color: #00ff00;
+            font-family: 'Press Start 2P', cursive;
+            font-size: 12px;
+            cursor: pointer;
+            transition: 0.2s;
+            text-transform: uppercase;
+        }
+        .action-btn:hover { background: #00ff00; color: black; }
+        
+        .btn-menu { border-color: #00ffff; color: #00ffff; }
+        .btn-menu:hover { background: #00ffff; }
+        
+        .btn-retry { border-color: #ff0055; color: #ff0055; }
+        .btn-retry:hover { background: #ff0055; }
+
+        .btn-gold { border-color: #FFD700; color: #FFD700; box-shadow: 0 0 10px #FFD700; }
+        .btn-gold:hover { background: #FFD700; color: black; }
+
+        h2 { font-size: 30px; margin-bottom: 20px; }
+        p { font-family: sans-serif; color: #ccc; font-size: 14px; line-height: 1.5; }
+
+    </style>
+</head>
+<body>
+
+    <div class="nav-bar">
+        <a href="../../index.html" class="back-link">← BACK</a>
+    </div>
+
+    <h1>NEON LEAP</h1>
+    
+    <div id="game-container">
+        
+        <div id="menu-screen" class="overlay">
+            <h2 style="color: #ff9900; text-shadow: 0 0 10px #ff9900;">SELECT LEVEL</h2>
+            <div id="level-grid"></div>
+            <p style="margin-top: 30px;">Use Left/Right Arrows<br>Reach the Green Line!</p>
+        </div>
+
+        <div id="win-screen" class="overlay hidden">
+            <h2 style="color: #00ff00; text-shadow: 0 0 10px #00ff00;">LEVEL COMPLETE!</h2>
+            <div>
+                <button class="action-btn btn-menu" onclick="showMenu()">Menu</button>
+                <button class="action-btn" onclick="prevLevel()">Prev</button>
+                <button class="action-btn" onclick="nextLevel()">Next</button>
+            </div>
+        </div>
+
+        <div id="lose-screen" class="overlay hidden">
+            <h2 style="color: #ff0055; text-shadow: 0 0 10px red;">YOU DIED</h2>
+            <button class="action-btn btn-retry" onclick="restartLevel()">TRY AGAIN</button>
+            <button class="action-btn btn-menu" onclick="showMenu()">Menu</button>
+        </div>
+
+        <div id="celebration-screen" class="overlay hidden">
+            <h2 style="color: #FFD700; text-shadow: 0 0 20px #FFD700; font-size: 35px;">YOU WON!</h2>
+            <div style="font-size: 50px; margin: 20px;">🏆</div>
+            <p style="color: white; margin-bottom: 30px;">ALL 11 LEVELS COMPLETED.<br>YOU ARE A MASTER JUMPER.</p>
+            <button class="action-btn btn-gold" onclick="showMenu()">RETURN TO MENU</button>
+        </div>
+
+        <div id="hud" style="position:absolute; top: 10px; right: 10px; color: white; z-index: 5; font-size: 12px;">
+            Level: <span id="lvl-indicator">1</span>
+        </div>
+
+        <canvas id="gameCanvas" width="400" height="600"></canvas>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        
+        const menuScreen = document.getElementById('menu-screen');
+        const winScreen = document.getElementById('win-screen');
+        const loseScreen = document.getElementById('lose-screen');
+        const celebrationScreen = document.getElementById('celebration-screen');
+        const lvlIndicator = document.getElementById('lvl-indicator');
+        const levelGrid = document.getElementById('level-grid');
+
+        let gameLoop;
+        let currentLevel = 1;
+        let gravity = 0.25;
+        let isGameOver = false;
+        let finishLineY = 0; 
+
+        let player = { x: 200, y: 500, w: 30, h: 30, vx: 0, vy: 0, speed: 5, color: "#ff9900" };
+        let platforms = [];
+        let keys = {};
+        
+        document.addEventListener('keydown', (e) => keys[e.code] = true);
+        document.addEventListener('keyup', (e) => keys[e.code] = false);
+
+        // Initialization
+        for(let i=1; i<=11; i++) {
+            let btn = document.createElement('button');
+            btn.className = 'level-btn';
+            btn.innerText = i;
+            btn.onclick = () => startLevel(i);
+            levelGrid.appendChild(btn);
+        }
+
+        function showMenu() {
+            stopGame();
+            menuScreen.classList.remove('hidden');
+            winScreen.classList.add('hidden');
+            loseScreen.classList.add('hidden');
+            celebrationScreen.classList.add('hidden');
+        }
+
+        function startLevel(lvl) {
+            currentLevel = lvl;
+            lvlIndicator.innerText = lvl;
+            menuScreen.classList.add('hidden');
+            winScreen.classList.add('hidden');
+            loseScreen.classList.add('hidden');
+            celebrationScreen.classList.add('hidden');
+            resetGameLogic();
+            generateLevel(lvl);
+            isGameOver = false;
+            gameLoop = requestAnimationFrame(loop);
+        }
+
+        function resetGameLogic() {
+            player.x = canvas.width / 2 - 15;
+            player.y = canvas.height - 100;
+            player.vx = 0;
+            player.vy = -10; 
+            platforms = [];
+        }
+
+        function generateLevel(lvl) {
+            // Level 11 (Custom)
+            if (lvl === 11) {
+                finishLineY = -1000; 
+                platforms.push({ x: 150, y: 550, w: 100, h: 15 }); 
+                platforms.push({ x: 50,  y: 450, w: 80, h: 15 });
+                platforms.push({ x: 250, y: 350, w: 80, h: 15 });
+                platforms.push({ x: 150, y: 250, w: 50, h: 15 }); 
+                platforms.push({ x: 10,  y: 100, w: 100, h: 15 });
+                platforms.push({ x: 300, y: -50, w: 80, h: 15 });
+                platforms.push({ x: 100, y: -200, w: 200, h: 15 });
+                platforms.push({ x: 200, y: -400, w: 40, h: 15 });
+                platforms.push({ x: 50,  y: -600, w: 40, h: 15 });
+                platforms.push({ x: 300, y: -800, w: 40, h: 15 });
+                platforms.push({ x: 0, y: finishLineY, w: 400, h: 30, type: 'finish' });
+                return; 
+            }
+
+            // Standard Levels
+            let baseGap = 70; 
+            let gapIncrease = (lvl * 5);
+            let maxGap = baseGap + gapIncrease;
+            if(maxGap > 140) maxGap = 140; 
+
+            let baseWidth = 80;
+            let widthDecrease = (lvl * 4); 
+            let platformW = baseWidth - widthDecrease;
+            if(platformW < 30) platformW = 30;
+
+            let totalHeight = 2000 + (lvl * 1000);
+
+            platforms.push({ x: canvas.width/2 - 50, y: canvas.height - 50, w: 100, h: 15, type: 'normal' });
+
+            let currentY = canvas.height - 150;
+            while(currentY > -totalHeight) {
+                let x = Math.random() * (canvas.width - platformW);
+                platforms.push({ x: x, y: currentY, w: platformW, h: 15, type: 'normal' });
+                currentY -= (50 + Math.random() * (maxGap - 50)); 
+            }
+
+            finishLineY = -totalHeight - 100;
+            platforms.push({ x: 0, y: finishLineY, w: 400, h: 30, type: 'finish' });
+        }
+
+        function update() {
+            if(isGameOver) return;
+
+            if (keys['ArrowLeft']) player.vx = -player.speed;
+            else if (keys['ArrowRight']) player.vx = player.speed;
+            else player.vx = 0;
+
+            player.x += player.vx;
+
+            if (player.x + player.w < 0) player.x = canvas.width;
+            else if (player.x > canvas.width) player.x = -player.w;
+
+            player.vy += gravity;
+            player.y += player.vy;
+
+            if (player.vy > 0) {
+                platforms.forEach(p => {
+                    if (
+                        player.x < p.x + p.w &&
+                        player.x + player.w > p.x &&
+                        player.y + player.h > p.y &&
+                        player.y + player.h < p.y + p.h + 15
+                    ) {
+                        player.vy = -10; 
+                        if(p.type === 'finish') {
+                            levelComplete();
+                        }
+                    }
+                });
+            }
+
+            if (player.y < canvas.height / 2) {
+                let diff = (canvas.height / 2) - player.y;
+                player.y = canvas.height / 2;
+                platforms.forEach(p => p.y += diff);
+            }
+
+            if (player.y > canvas.height) {
+                die();
+            }
+        }
+
+        function draw() {
+            ctx.fillStyle = "#111";
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            platforms.forEach(p => {
+                if(p.type === 'finish') {
+                    ctx.fillStyle = "#00ff00";
+                    ctx.shadowBlur = 20;
+                    ctx.shadowColor = "#00ff00";
+                    ctx.fillRect(p.x, p.y, p.w, p.h);
+                    ctx.fillStyle = "black";
+                    ctx.font = "15px sans-serif";
+                    ctx.fillText("FINISH LINE", p.x + 150, p.y + 20);
+                } else {
+                    ctx.fillStyle = "#00aaff";
+                    ctx.shadowBlur = 10;
+                    ctx.shadowColor = "#00aaff";
+                    ctx.fillRect(p.x, p.y, p.w, p.h);
+                }
+                ctx.shadowBlur = 0;
+            });
+
+            ctx.fillStyle = player.color;
+            ctx.shadowBlur = 15;
+            ctx.shadowColor = player.color;
+            ctx.fillRect(player.x, player.y, player.w, player.h);
+            
+            ctx.fillStyle = "black";
+            ctx.shadowBlur = 0;
+            ctx.fillRect(player.x + 5, player.y + 8, 6, 6);
+            ctx.fillRect(player.x + 19, player.y + 8, 6, 6);
+        }
+
+        function loop() {
+            if(!isGameOver) {
+                update();
+                draw();
+                requestAnimationFrame(loop);
+            }
+        }
+
+        function stopGame() {
+            isGameOver = true;
+            cancelAnimationFrame(gameLoop);
+        }
+
+        function die() {
+            stopGame();
+            loseScreen.classList.remove('hidden');
+        }
+
+        function restartLevel() {
+            startLevel(currentLevel);
+        }
+
+        function levelComplete() {
+            stopGame();
+            winScreen.classList.remove('hidden');
+        }
+
+        function nextLevel() {
+            if(currentLevel < 11) {
+                startLevel(currentLevel + 1);
+            } else {
+                winScreen.classList.add('hidden');
+                celebrationScreen.classList.remove('hidden');
+            }
+        }
+
+        function prevLevel() {
+            if(currentLevel > 1) {
+                startLevel(currentLevel - 1);
+            }
+        }
+    </script>
+</body>
+</html>
